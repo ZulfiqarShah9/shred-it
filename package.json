@@ -1,0 +1,72 @@
+{
+  "name": "shred-it",
+  "version": "1.0.0",
+  "description": "Floating two-stage paper shredder widget",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder --mac --win",
+    "dist:mac": "electron-builder --mac dmg",
+    "dist:win": "electron-builder --win nsis"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.3.3",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "local.shred.it",
+    "productName": "Shred-it",
+    "copyright": "Copyright \u00a9 2026",
+    "directories": {
+      "output": "installers"
+    },
+    "mac": {
+      "category": "public.app-category.utilities",
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "universal"
+          ]
+        }
+      ],
+      "icon": "assets/shred-it.icns"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "assets/shred-it.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "installerIcon": "assets/shred-it.ico",
+      "uninstallerIcon": "assets/shred-it.ico"
+    },
+    "files": [
+      "paper-shredder-widget.html",
+      "main.js",
+      "preload.js",
+      "assets/**"
+    ]
+  },
+  "allowScripts": {
+    "electron@28.3.3": true
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ZulfiqarShah9/shred-it.git"
+  },
+  "homepage": "https://github.com/ZulfiqarShah9/shred-it"
+}

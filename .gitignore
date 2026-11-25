@@ -1,0 +1,7 @@
+node_modules/
+installers/*.dmg
+installers/*.exe
+installers/*.blockmap
+.DS_Store
+npm-debug.log*
+*.log

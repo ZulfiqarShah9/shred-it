@@ -1,0 +1,2 @@
+2c5946911a083edafbb8eba8f7d1474cd9b85e60ecd2f2eac371d076f58dbd26  Shred-it-1.0.0-universal.dmg
+1da273ee9826d29aa535e05c6e9bf3d4c36ac0769d23ce2fadcf2d69f0ad1507  Shred-it Setup 1.0.0.exe

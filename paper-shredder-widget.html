@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Paper Shredder Widget</title>
+    <script>
+        (function() {
+            try {
+                var mode = localStorage.getItem('paper-shredder-theme') || 'auto';
+                var theme = mode === 'auto' ? (window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark') : mode;
+                document.documentElement.dataset.theme = theme;
+            } catch (e) { document.documentElement.dataset.theme = 'dark'; }
+        })();
+    </script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --accent-gold: #D4A843;
+            --accent-gold-dim: rgba(212, 168, 67, 0.6);
+            --paper-white: #FAFAFA;
+            --paper-shadow: rgba(0, 0, 0, 0.15);
+            --shredder-metal: #2D2D2D;
+            --shredder-metal-light: #3D3D3D;
+            --shredder-dark: #1A1A1A;
+            --bin-liner: #151515;
+            --danger-red: #C0392B;
+            --success-green: #27AE60;
+            --cutter-steel: #5A5A5A;
+            --cutter-steel-dark: #2D2D2D;
+            --slot-bg: linear-gradient(180deg, #050505, #121212 60%, #1a1a1a);
+            --cutter-window-bg: linear-gradient(180deg, #070707, #191919);
+            --bin-bg: linear-gradient(180deg, rgba(0,0,0,0.55), rgba(0,0,0,0.78) 35%, rgba(0,0,0,0.55));
+            --bin-seam: linear-gradient(180deg, rgba(0,0,0,0.6), rgba(255,255,255,0.06) 60%, rgba(0,0,0,0.25));
+
+            --case-top: #414141;
+            --case-mid: #282828;
+            --case-bottom: #161616;
+            --case-border: rgba(0, 0, 0, 0.6);
+            --case-highlight: rgba(255, 255, 255, 0.16);
+            --case-shadow: rgba(0, 0, 0, 0.5);
+            --bar-bg: rgba(0, 0, 0, 0.22);
+            --bar-border: rgba(255, 255, 255, 0.1);
+            --chip-bg: rgba(255, 255, 255, 0.1);
+            --text-primary: rgba(255, 255, 255, 0.95);
+            --text-secondary: rgba(255, 255, 255, 0.62);
+
+            --glass-bg: var(--chip-bg);
+            --glass-border: var(--bar-border);
+            --glass-highlight: var(--case-highlight);
+            --glass-shadow: var(--case-shadow);
+            --brand-color: rgba(255, 255, 255, 0.2);
+            --on-dark-text: rgba(255, 255, 255, 0.45);
+            --strip-edge: rgba(0, 0, 0, 0.04);
+            --grille-bg: linear-gradient(180deg, #3a3a3a, #202020);
+            --hole-color: rgba(0, 0, 0, 0.85);
+        }
+
+        :root[data-theme="light"] {
+            --case-top: #F6F6F8;
+            --case-mid: #DEDEE2;
+            --case-bottom: #BEBEC4;
+            --case-border: rgba(0, 0, 0, 0.24);
+            --case-highlight: rgba(255, 255, 255, 0.9);
+            --case-shadow: rgba(0, 0, 0, 0.28);
+            --bar-bg: rgba(255, 255, 255, 0.34);
+            --bar-border: rgba(0, 0, 0, 0.12);
+            --chip-bg: rgba(0, 0, 0, 0.07);
+            --paper-white: #FFFFFF;
+            --paper-shadow: rgba(0, 0, 0, 0.12);
+            --cutter-steel: #6A6A6A;
+            --cutter-steel-dark: #3D3D3D;
+            --shredder-metal: #B8B8BE;
+            --shredder-metal-light: #D6D6DC;
+            --shredder-dark: #909097;
+            --bin-liner: #ADADB4;
+            --slot-bg: linear-gradient(180deg, #B9B9C0, #DEDEE3 60%, #EEEEF1);
+            --cutter-window-bg: linear-gradient(180deg, #A9A9B0, #D0D0D6);
+            --bin-bg: linear-gradient(180deg, #9D9DA5 0%, #B9B9C1 35%, #92929B 100%);
+            --bin-seam: linear-gradient(180deg, rgba(0,0,0,0.25), rgba(255,255,255,0.85) 60%, rgba(0,0,0,0.14));
+            --text-primary: rgba(0, 0, 0, 0.9);
+            --text-secondary: rgba(0, 0, 0, 0.55);
+            --brand-color: rgba(0, 0, 0, 0.3);
+            --strip-edge: rgba(0, 0, 0, 0.3);
+            --grille-bg: linear-gradient(180deg, #c4c4ca, #9e9ea6);
+            --hole-color: rgba(0, 0, 0, 0.5);
+        }
+
+        html, body { height: 100%; width: 100%; overflow: hidden; background: transparent; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', sans-serif;
+            -webkit-font-smoothing: antialiased; display: flex; justify-content: center; align-items: center; min-height: 100vh;
+        }
+
+        .widget-container {
+            position: relative; width: 300px; height: 560px;
+            background: linear-gradient(180deg, var(--case-top) 0%, var(--case-mid) 45%, var(--case-bottom) 100%);
+            border-radius: 24px; border: 1px solid var(--case-border);
+            box-shadow: 0 20px 60px var(--case-shadow), 0 8px 24px var(--case-shadow),
+                inset 0 1px 0 var(--case-highlight), inset 0 -1px 0 rgba(0,0,0,0.25);
+            overflow: hidden; display: flex; flex-direction: column;
+            user-select: none; -webkit-user-select: none; -webkit-app-region: drag;
+        }
+
+        .window-controls { display: flex; gap: 8px; padding: 12px 16px 8px; -webkit-app-region: drag; flex-shrink: 0; position: relative; z-index: 60;
+            background: var(--bar-bg); border-bottom: 1px solid var(--bar-border); }
+        .window-btn { width: 12px; height: 12px; border-radius: 50%; border: none; cursor: pointer;
+            transition: transform 0.15s ease; -webkit-app-region: no-drag; }
+        .window-btn:hover { transform: scale(1.15); }
+        .window-btn.close { background: #FF5F57; } .window-btn.minimize { background: #FEBC42; }
+        .window-btn.settings { background: #28CA42; }
+
+        .shredder-machine {
+            flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
+            gap: 3px; position: relative; padding: 20px 16px 0; min-height: 0;
+        }
+
+        /* ========== ONE CONTINUOUS MACHINE CASING ========== */
+        .machine-shell { position: relative; width: 262px; flex: 1; min-height: 0; display: flex; flex-direction: column; background: transparent; }
+
+        .machine-body { position: relative; width: 100%; flex-shrink: 0; }
+        .machine-body.shredding { animation: machineVibrate 0.09s linear infinite; }
+        @keyframes machineVibrate {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(0.5px, -0.5px); }
+            50% { transform: translate(-0.5px, 0.5px); }
+            75% { transform: translate(0.5px, 0.5px); }
+        }
+        .machine-body.shredding-hard { animation: machineJam 0.11s linear infinite; }
+        @keyframes machineJam {
+            0%, 100% { transform: translate(0, 0) rotate(0deg); }
+            20% { transform: translate(1.6px, -1px) rotate(0.3deg); }
+            40% { transform: translate(-1.8px, 1.2px) rotate(-0.35deg); }
+            60% { transform: translate(1.2px, 1.4px) rotate(0.25deg); }
+            80% { transform: translate(-1.4px, -1.2px) rotate(-0.2deg); }
+        }
+
+        .cutter-mechanism { position: relative; width: 100%; height: 226px; z-index: 15; background: transparent; }
+        .cutter-cap { position: relative; height: 24px; display: flex; align-items: center; justify-content: center;
+            border-bottom: 1px solid var(--bar-border); }
+        .top-brand { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); pointer-events: none;
+            font-size: 7px; letter-spacing: 3px; font-weight: 700; color: var(--brand-color); white-space: nowrap; transition: opacity 0.2s ease; }
+        .widget-container.has-file .top-brand { opacity: 0; }
+        .file-name { position: absolute; left: 18px; top: 5px; max-width: 86px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+            font-size: 9px; font-weight: 600; color: var(--text-secondary); pointer-events: none; z-index: 30; }
+        .file-dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; margin-right: 4px; vertical-align: middle;
+            box-shadow: 0 0 4px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.45); }
+
+        /* FEED SLOT + CUTTER are the same opening: rollers sit exactly where paper enters */
+        .feed-slot {
+            position: relative; width: calc(100% - 24px); height: 38px; margin: 0 auto;
+            background: var(--slot-bg);
+            box-shadow: inset 0 4px 10px rgba(0,0,0,0.95), 0 1px 0 rgba(255,255,255,0.06);
+            z-index: 14;
+        }
+        .feed-slot::after {
+            content: ''; position: absolute; left: -8px; right: -8px; bottom: -9px; height: 12px; z-index: 20;
+            background: linear-gradient(180deg, var(--shredder-metal-light) 0%, var(--shredder-dark) 100%);
+            border-radius: 0 0 6px 6px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.18);
+        }
+
+        .cutter-window {
+            position: absolute; left: 6px; right: 6px; top: 3px; height: 24px;
+            background: var(--cutter-window-bg);
+            border-radius: 4px; box-shadow: inset 0 2px 8px #000, 0 1px 0 rgba(255,255,255,0.06);
+            overflow: hidden; z-index: 14;
+        }
+
+        /* PAPER sticking out of the slot */
+        .paper-waiting {
+            position: absolute; width: 186px; height: 166px; left: 50%; bottom: 100%;
+            transform: translateX(-50%); transform-origin: center bottom;
+            background: var(--paper-white); border-radius: 2px 2px 0 0;
+            box-shadow: 0 8px 22px var(--paper-shadow), 0 2px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.8);
+            z-index: 10; display: flex; flex-direction: column; overflow: hidden;
+            opacity: 0; visibility: hidden; pointer-events: none;
+            transition: opacity 0.25s ease, visibility 0.25s ease;
+        }
+        .paper-waiting.has-paper { opacity: 1; visibility: visible; }
+        .paper-content { flex: 1; padding: 12px; overflow: hidden; position: relative; background: var(--paper-white); }
+        .paper-content img { width: 100%; height: 100%; object-fit: contain; }
+        .paper-content.pdf-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #666; font-size: 12px; text-align: center; background: linear-gradient(135deg,#fff5e6,#ffe0b3); }
+        .paper-content.pdf-preview::before { content: '📄'; font-size: 42px; }
+        .paper-content.text-preview { font-family: 'SF Mono', Monaco, monospace; font-size: 9px; line-height: 1.6; color: #333; white-space: pre-wrap; overflow: hidden; }
+        .paper-content.generic-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: #888; font-size: 11px; text-align: center; }
+        .paper-content.generic-preview::before { content: '📎'; font-size: 36px; }
+        .paper-content.folder-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; color: rgba(60,40,10,0.85); }
+        .folder-shape { position: relative; width: 116px; height: 78px; border-radius: 5px;
+            background: linear-gradient(180deg, rgba(255,255,255,0.28), rgba(0,0,0,0.12));
+            box-shadow: 0 6px 12px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.5); }
+        .folder-tab { position: absolute; top: -9px; left: 4px; width: 40px; height: 11px; border-radius: 4px 4px 0 0;
+            background: inherit; box-shadow: inset 0 1px 0 rgba(255,255,255,0.45); }
+        .folder-face { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 38px; }
+        .folder-name { max-width: 96%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 9px; font-weight: 700; }
+
+        .paper-content.thumb-preview { background: var(--paper-white); }
+        .paper-content.thumb-preview img { width: 100%; height: 100%; object-fit: contain; }
+        .thumb-label { position: absolute; left: 0; right: 0; bottom: 0; padding: 3px 5px; text-align: center;
+            font-size: 8px; font-weight: 700; color: #fff; background: rgba(0,0,0,0.55);
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        .paper-content.finder-preview { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
+        .finder-icon { position: relative; width: 92px; height: 108px; border-radius: 6px;
+            background: linear-gradient(160deg, #fff 0%, #f4f4f6 70%, #e6e6ea 100%);
+            box-shadow: 0 8px 16px rgba(0,0,0,0.22), inset 0 1px 0 #fff, inset 0 0 0 1px rgba(0,0,0,0.06); }
+        .finder-icon::before { content: ''; position: absolute; top: -1px; right: -1px; width: 18px; height: 18px;
+            background: linear-gradient(225deg, rgba(0,0,0,0.12) 50%, transparent 51%); border-radius: 0 6px 0 3px; }
+        .finder-glyph { position: absolute; top: 16px; left: 0; right: 0; text-align: center; font-size: 38px; }
+        .finder-ext { position: absolute; bottom: 0; left: 0; right: 0; height: 26px; border-radius: 0 0 6px 6px;
+            background: var(--fc); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: 0.5px;
+            display: flex; align-items: center; justify-content: center; text-shadow: 0 1px 1px rgba(0,0,0,0.25); }
+        .finder-label { max-width: 96%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 10px; font-weight: 700; color: #4a4a55; }
+        .finder-kind { font-size: 9px; color: #8a8a96; }
+        .paper-content::after { content: ''; position: absolute; inset: 0; pointer-events: none;
+            background: linear-gradient(180deg, rgba(255,255,255,0.35), transparent 25%, rgba(0,0,0,0.05)); }
+
+        /* VERTICAL SLITS: grow up the paper as it passes through the rollers */
+        .cut-lines { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; transition: opacity 0.12s ease; }
+        .paper-waiting.shredding .cut-lines { opacity: 1; }
+        .cut-line {
+            position: absolute; top: 0; bottom: 0; width: 2px;
+            background: linear-gradient(0deg, rgba(0,0,0,0.72), rgba(0,0,0,0.45) 60%, rgba(0,0,0,0.12));
+            box-shadow: 1px 0 0 rgba(255,255,255,0.4);
+            transform: scaleY(0); transform-origin: bottom center;
+        }
+
+        /* STRIPS hanging from the roller while the paper is being consumed */
+        .hanging-layer {
+            position: absolute; left: 38px; right: 38px; top: 60px; height: 158px;
+            z-index: 22; pointer-events: none; overflow: visible;
+        }
+        .hanging-strip {
+            position: absolute; top: 0; width: 5px; height: 100px;
+            background: var(--paper-white); border-radius: 0 0 2px 2px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5), 0 0 0 0.5px var(--strip-edge), inset 0 1px 0 rgba(255,255,255,0.45);
+            transform-origin: top center; transform: scaleY(0);
+        }
+
+        .roller { position: absolute; left: 0; right: 0; height: 9px; }
+        .roller.upper { top: 1px; }
+        .roller.lower { bottom: 1px; }
+        .roller::before {
+            content: ''; position: absolute; inset: 0;
+            background-image: repeating-linear-gradient(90deg,
+                var(--cutter-steel) 0 2px, var(--cutter-steel-dark) 2px 5px, #101010 5px 7px);
+            background-size: 14px 100%;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.22), inset 0 -2px 4px rgba(0,0,0,0.8), 0 2px 5px rgba(0,0,0,0.6);
+            border-radius: 2px;
+        }
+        .roller.upper::after, .roller.lower::after {
+            content: ''; position: absolute; left: 0; right: 0; height: 3px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.12), transparent);
+        }
+        .roller.upper::after { bottom: 0; } .roller.lower::after { top: 0; }
+        .cutter-mechanism.shredding .roller.upper::before { animation: teethUpper 0.13s linear infinite; }
+        .cutter-mechanism.shredding .roller.lower::before { animation: teethLower 0.13s linear infinite; }
+        .cutter-mechanism.shredding .roller.upper { animation: meshUpper 0.13s ease-in-out infinite; }
+        .cutter-mechanism.shredding .roller.lower { animation: meshLower 0.13s ease-in-out infinite; }
+        @keyframes teethUpper { to { background-position: 14px 0; } }
+        @keyframes teethLower { to { background-position: -14px 0; } }
+        @keyframes meshUpper { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+        @keyframes meshLower { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+
+        .cutter-shaft {
+            position: absolute; left: 14px; right: 14px; top: 72px; height: 10px;
+            background-image: repeating-linear-gradient(115deg, var(--cutter-steel) 0 2px, var(--cutter-steel-dark) 2px 7px);
+            background-size: 18px 100%;
+            border-radius: 3px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.18), inset 0 -3px 5px rgba(0,0,0,0.85), 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .cutter-mechanism.shredding .cutter-shaft { animation: shaftSpin 0.16s linear infinite; }
+        @keyframes shaftSpin { to { background-position: 18px 0; } }
+
+        .theme-btn {
+            position: absolute; top: 7px; right: 12px; width: 26px; height: 26px;
+            background: transparent; border: none; color: var(--text-primary);
+            font-size: 15px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.18s ease; z-index: 61; -webkit-app-region: no-drag; padding: 0;
+        }
+        .theme-btn:hover { transform: scale(1.15); }
+
+        .speaker-grille {
+            position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+            width: 78px; height: 16px; border-radius: 8px; background: var(--grille-bg);
+            box-shadow: inset 0 1px 3px rgba(0,0,0,0.55), 0 1px 0 var(--case-highlight);
+            z-index: 29; pointer-events: none;
+        }
+        .speaker-grille::before {
+            content: ''; position: absolute; inset: 3px 6px;
+            background-image: radial-gradient(circle, var(--hole-color) 1.1px, transparent 1.6px);
+            background-size: 6px 6px; opacity: 0.95;
+        }
+
+        .icon-btn {
+            position: absolute; top: 38px; width: 18px; height: 18px; padding: 0;
+            border: none; background: transparent; color: var(--text-secondary);
+            font-size: 12px; cursor: pointer; z-index: 62; -webkit-app-region: no-drag;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .icon-btn:hover { transform: scale(1.15); color: var(--text-primary); }
+        .icon-btn.muted { opacity: 0.45; }
+        #soundBtn { right: 40px; }
+        #pickBtn { right: 12px; font-size: 13px; }
+
+        /* ========== BIN ========== */
+        .bin-container { position: relative; width: 100%; flex: 1; min-height: 148px; z-index: 6; }
+        .bin-container::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 5px; z-index: 5;
+            background: var(--bin-seam);
+            border-bottom: 1px solid var(--bar-border); }
+        .bin {
+            width: 100%; height: 100%;
+            background: var(--bin-bg);
+            border-radius: 0 0 15px 15px; border: none;
+            box-shadow: inset 0 6px 18px rgba(0,0,0,0.75), inset 0 -2px 8px rgba(0,0,0,0.45);
+            overflow: hidden; position: relative;
+        }
+        .bin::before { display: none; }
+        .bin-liner-pattern { position: absolute; inset: 0;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, rgba(255,255,255,0.015) 10px, rgba(255,255,255,0.015) 20px),
+                repeating-linear-gradient(-45deg, transparent, transparent 10px, rgba(255,255,255,0.015) 10px, rgba(255,255,255,0.015) 20px); pointer-events: none; }
+
+        .bin-pile { position: absolute; left: 10px; right: 14px; top: 6px; bottom: 8px; z-index: 2; pointer-events: none; }
+        .bin-fall-layer { position: absolute; inset: 0; z-index: 2; pointer-events: none; overflow: visible; }
+
+        .burn-layer { position: absolute; inset: 0; z-index: 5; pointer-events: none; }
+        .fire-canvas { position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+        .bin.burning { box-shadow: inset 0 0 40px rgba(255, 90, 20, 0.55), inset 0 -2px 8px rgba(0,0,0,0.45); }
+        .bin.burning::after { content: ''; position: absolute; inset: 0; z-index: 1; background: rgba(12, 8, 6, 0.5); pointer-events: none; }
+        .flame {
+            position: absolute; bottom: 4px; width: 20px; height: 34px; border-radius: 50% 50% 42% 42%;
+            background: radial-gradient(ellipse at 50% 80%, #FFF2A8 0%, #FFB22E 35%, #F25C12 70%, rgba(180,40,0,0) 100%);
+            filter: blur(1.2px); transform-origin: center bottom; opacity: 0.9;
+            animation: flameDance 0.17s ease-in-out infinite alternate;
+        }
+        .flame.big { width: 26px; }
+        .flame.small { width: 14px; opacity: 0.75; }
+        @keyframes flameDance {
+            0% { transform: scale(0.82, 0.86) skewX(-7deg); opacity: 0.72; }
+            100% { transform: scale(1.12, 1.2) skewX(7deg); opacity: 1; }
+        }
+        .burn-glow {
+            position: absolute; bottom: -6px; width: 74px; height: 120%;
+            background: radial-gradient(ellipse at 50% 78%, rgba(255,238,150,0.6) 0%, rgba(255,150,30,0.4) 35%, rgba(230,60,10,0.18) 60%, transparent 78%);
+            filter: blur(7px);
+        }
+        .ember {
+            position: absolute; width: 2.5px; height: 2.5px; border-radius: 50%;
+            background: #FFC75A; box-shadow: 0 0 5px 2px rgba(255,120,20,0.7);
+        }
+        .fireball {
+            position: absolute; bottom: 18px; width: 96px; height: 76px; border-radius: 50%;
+            background: radial-gradient(circle at 50% 62%, #FFFBE0 0%, #FFD85C 20%, #FF9424 42%, #F1540D 62%, rgba(170,40,0,0) 80%);
+            filter: blur(4px); transform-origin: center bottom;
+        }
+        .burn-flash {
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 50% 82%, rgba(255,226,150,0.75), rgba(255,130,30,0.25) 45%, transparent 72%);
+        }
+        .smoke-layer { position: absolute; inset: 0; z-index: 26; pointer-events: none; overflow: visible; }
+        .smoke-puff {
+            position: absolute; width: 40px; height: 40px; border-radius: 50%;
+            background: radial-gradient(circle, rgba(245,245,245,0.62), rgba(210,210,210,0.28) 55%, rgba(200,200,200,0) 76%);
+            filter: blur(5px);
+        }
+        .bin-front { position: absolute; inset: 0; z-index: 3; pointer-events: none;
+            background: linear-gradient(180deg, rgba(255,255,255,0.05) 0%, transparent 22%, transparent 70%, rgba(0,0,0,0.22) 100%); }
+        .bin-front::after { content: ''; position: absolute; top: 8px; left: 50%; transform: translateX(-50%);
+            width: 80px; height: 4px; background: linear-gradient(90deg, transparent, var(--accent-gold-dim), transparent); border-radius: 2px; opacity: 0.5; }
+
+        /* Individual shredded strips: thin, curled, randomly piled */
+        .shred-strip {
+            position: absolute; left: 0; top: 0; width: 4px; height: 42px;
+            background: var(--paper-white); border-radius: 1px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.45), 0 0 0 0.5px var(--strip-edge), inset 0 1px 0 rgba(255,255,255,0.4);
+            transform-origin: center center; will-change: transform, opacity; pointer-events: none;
+        }
+        .shred-strip.settled { will-change: auto; }
+        .falling-layer { position: absolute; inset: 0; z-index: 25; pointer-events: none; overflow: visible; }
+        .drop-fall-layer { position: absolute; inset: 0; z-index: 24; pointer-events: none; overflow: visible; }
+
+        .bin-fill-indicator { position: absolute; right: 6px; top: 8%; transform: translateY(0);
+            width: 4px; height: 84%; background: var(--chip-bg); border-radius: 2px; overflow: hidden; z-index: 4; }
+        .bin-fill-level { width: 100%; height: 0%; background: linear-gradient(180deg, var(--success-green) 0%, var(--accent-gold) 50%, var(--danger-red) 100%); border-radius: 2px; transition: height 0.5s cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+        .empty-btn {
+            position: absolute; bottom: 8px; right: 18px; width: 28px; height: 28px; border-radius: 8px;
+            background: var(--chip-bg); border: 1px solid var(--bar-border);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
+            transition: all 0.2s ease; -webkit-app-region: no-drag; z-index: 40;
+        }
+        .empty-btn:hover { background: rgba(231,76,60,0.2); border-color: var(--danger-red); color: var(--danger-red); transform: rotate(45deg); }
+
+        /* Status Bar */
+        .status-bar { display: flex; align-items: center; justify-content: space-between; padding: 10px 16px;
+            background: var(--bar-bg); border-top: 1px solid var(--bar-border); -webkit-app-region: drag; flex-shrink: 0; }
+        .status-item { display: flex; align-items: center; gap: 8px; color: var(--text-secondary); font-size: 11px; font-weight: 500; -webkit-app-region: no-drag; }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--success-green); box-shadow: 0 0 8px var(--success-green); animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(0.9); } }
+        .status-dot.processing { background: var(--accent-gold); box-shadow: 0 0 8px var(--accent-gold); animation: pulse 0.8s ease-in-out infinite; }
+        .status-dot.error { background: var(--danger-red); box-shadow: 0 0 8px var(--danger-red); animation: none; }
+        .status-dot.ready { background: var(--success-green); box-shadow: 0 0 8px var(--success-green); }
+        .status-text { color: var(--text-primary); }
+        .file-count { display: flex; align-items: center; gap: 6px; padding: 4px 10px; background: var(--chip-bg); border-radius: 12px; font-size: 11px; font-weight: 600; color: var(--text-primary); -webkit-app-region: no-drag; }
+        .file-count span { color: var(--accent-gold); }
+
+        /* Drop Overlay */
+        .drop-overlay { position: absolute; inset: 0; background: rgba(212,168,67,0.08); border: 2px dashed var(--accent-gold); border-radius: 24px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; opacity: 0; pointer-events: none; transition: opacity 0.3s ease; z-index: 100; }
+        .drop-overlay.active { opacity: 1; pointer-events: auto; }
+        .drop-icon { font-size: 40px; animation: bounce 1.5s ease-in-out infinite; }
+        @keyframes bounce { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        .drop-text { color: var(--accent-gold); font-size: 12px; font-weight: 600; text-align: center; padding: 0 20px; }
+        .drop-hint { color: var(--text-secondary); font-size: 10px; text-align: center; padding: 0 20px; }
+
+        .settings-btn { position: absolute; top: 10px; right: 12px; width: 32px; height: 32px; border-radius: 10px;
+            background: var(--glass-bg); border: 1px solid var(--glass-border); backdrop-filter: blur(20px);
+            cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-secondary);
+            transition: all 0.2s ease; -webkit-app-region: no-drag; z-index: 50; }
+        .settings-btn:hover { background: rgba(255,255,255,0.15); color: var(--text-primary); transform: rotate(45deg); }
+
+        .empty-state { position: absolute; bottom: 64px; left: 50%; transform: translateX(-50%); text-align: center; pointer-events: none; z-index: 2; transition: opacity 0.2s; }
+        .empty-state.hidden { opacity: 0; }
+        .empty-icon { font-size: 28px; opacity: 0.3; margin-bottom: 8px; }
+        .empty-text { color: var(--on-dark-text); font-size: 11px; line-height: 1.5; }
+
+        /* Settings Modal */
+        .modal { position: fixed; inset: 0; background: rgba(0,0,0,0.6); backdrop-filter: blur(10px);
+            display: flex; align-items: center; justify-content: center; z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .modal.visible { opacity: 1; pointer-events: auto; }
+        .modal-box { background: var(--glass-bg); backdrop-filter: blur(30px); border: 1px solid var(--glass-border);
+            border-radius: 20px; padding: 24px; width: 320px; max-width: 90vw; box-shadow: 0 20px 60px var(--glass-shadow);
+            transform: scale(0.9); transition: transform 0.2s ease; }
+        .modal.visible .modal-box { transform: scale(1); }
+        .modal h3 { color: var(--text-primary); margin-bottom: 20px; font-size: 16px; }
+        .modal label { display: flex; align-items: center; justify-content: space-between; color: var(--text-primary); font-size: 13px; margin-bottom: 16px; }
+        .modal select, .modal input[type=number] { background: rgba(255,255,255,0.1); border: 1px solid var(--glass-border); border-radius: 8px; padding: 6px 12px; color: var(--text-primary); font-size: 12px; }
+        .modal input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--accent-gold); }
+        .modal .btn-group { display: flex; gap: 12px; justify-content: flex-end; }
+        .modal button { padding: 10px 20px; border-radius: 10px; font-size: 12px; font-weight: 600; cursor: pointer; border: none; }
+        .modal .btn-cancel { background: transparent; border: 1px solid var(--glass-border); color: var(--text-primary); }
+        .modal .btn-save { background: var(--accent-gold); color: #1a1a1a; }
+
+        @media (prefers-contrast: high) { :root { --glass-border: rgba(255,255,255,0.3); --glass-highlight: rgba(255,255,255,0.5); } }
+    </style>
+</head>
+<body>
+    <div class="widget-container" id="widgetContainer">
+        <div class="window-controls">
+            <button class="window-btn close" id="closeBtn" title="Hide"></button>
+            <button class="window-btn minimize" id="minimizeBtn" title="Minimize"></button>
+            <button class="window-btn settings" id="settingsBtn" title="Settings"></button>
+            <span class="top-brand">SHRED-IT</span>
+            <button class="theme-btn" id="themeBtn" title="Switch theme (double-click: system)">🌙</button>
+            <button class="icon-btn" id="soundBtn" title="Sound: on" aria-pressed="true"><span id="soundIcon">🔊</span></button>
+            <button class="icon-btn" id="pickBtn" title="Select file to shred">📂</button>
+            <input type="file" id="fileInput" multiple hidden>
+        </div>
+
+        <div class="drop-overlay" id="dropOverlay">
+            <div class="drop-icon">📄</div>
+            <div class="drop-text">Drop files here</div>
+            <div class="drop-hint">Drop a file and shredding starts automatically</div>
+        </div>
+
+        <div class="shredder-machine" id="shredderMachine">
+            <span class="file-name" id="fileName">No file</span>
+            <div class="speaker-grille" aria-hidden="true"></div>
+            <div class="machine-shell">
+            <div class="machine-body" id="machineBody">
+                <div class="cutter-mechanism" id="cutterMechanism">
+                    <div class="cutter-cap"></div>
+                    <div class="feed-slot" id="feedSlot">
+                        <div class="paper-waiting" id="paperWaiting">
+                            <div class="paper-content" id="paperWaitingContent"></div>
+                            <div class="cut-lines" id="cutLines"></div>
+                        </div>
+                        <div class="cutter-window">
+                            <div class="roller upper"></div>
+                            <div class="roller lower"></div>
+                        </div>
+                    </div>
+                    <div class="cutter-shaft"></div>
+                </div>
+                <div class="hanging-layer" id="hangingLayer"></div>
+            </div>
+
+            <div class="bin-container" id="binContainer">
+                <div class="bin" id="bin">
+                    <div class="bin-liner-pattern"></div>
+                    <div class="bin-pile" id="binPile"></div>
+                    <div class="bin-fall-layer" id="binFallLayer"></div>
+                    <div class="burn-layer" id="burnLayer"></div>
+                    <canvas class="fire-canvas" id="fireCanvas"></canvas>
+                    <div class="bin-front"></div>
+                </div>
+                <div class="bin-fill-indicator">
+                    <div class="bin-fill-level" id="binFillLevel"></div>
+                </div>
+                <button class="empty-btn" id="emptyBtn" title="Empty bin">🗑️</button>
+            </div>
+            </div>
+
+            <div class="smoke-layer" id="smokeLayer"></div>
+            <div class="drop-fall-layer" id="dropFallLayer"></div>
+            <div class="falling-layer" id="fallingLayer"></div>
+
+            <div class="empty-state" id="emptyState">
+                <div class="empty-icon">🗂️</div>
+                <div class="empty-text">Drop files → automatic shredding</div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item">
+                <div class="status-dot ready" id="statusDot"></div>
+                <span class="status-text" id="statusText">Ready - Drop files</span>
+            </div>
+            <div class="file-count" id="fileCount">
+                <span id="shreddedCount">0</span> destroyed
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            'use strict';
+
+            const state = {
+                isProcessing: false, queuedFiles: [], pendingFile: null,
+                shreddedCount: 0, binFillLevel: 0, objectUrls: [], isBurning: false
+            };
+
+            const el = {
+                widgetContainer: document.getElementById('widgetContainer'),
+                shredderMachine: document.getElementById('shredderMachine'),
+                machineBody: document.getElementById('machineBody'),
+                feedSlot: document.getElementById('feedSlot'),
+                paperWaiting: document.getElementById('paperWaiting'),
+                paperWaitingContent: document.getElementById('paperWaitingContent'),
+                cutLines: document.getElementById('cutLines'),
+                cutterMechanism: document.getElementById('cutterMechanism'),
+                hangingLayer: document.getElementById('hangingLayer'),
+                bin: document.getElementById('bin'),
+                binPile: document.getElementById('binPile'),
+                binFallLayer: document.getElementById('binFallLayer'),
+                dropFallLayer: document.getElementById('dropFallLayer'),
+                burnLayer: document.getElementById('burnLayer'),
+                fireCanvas: document.getElementById('fireCanvas'),
+                smokeLayer: document.getElementById('smokeLayer'),
+                fallingLayer: document.getElementById('fallingLayer'),
+                binFillLevel: document.getElementById('binFillLevel'),
+                emptyBtn: document.getElementById('emptyBtn'),
+                emptyState: document.getElementById('emptyState'),
+                dropOverlay: document.getElementById('dropOverlay'),
+                statusDot: document.getElementById('statusDot'),
+                statusText: document.getElementById('statusText'),
+                shreddedCount: document.getElementById('shreddedCount'),
+                closeBtn: document.getElementById('closeBtn'),
+                minimizeBtn: document.getElementById('minimizeBtn'),
+                settingsBtn: document.getElementById('settingsBtn'),
+                themeBtn: document.getElementById('themeBtn'),
+                soundBtn: document.getElementById('soundBtn'),
+                soundIcon: document.getElementById('soundIcon'),
+                pickBtn: document.getElementById('pickBtn'),
+                fileInput: document.getElementById('fileInput'),
+                fileName: document.getElementById('fileName')
+            };
+
+            const electronAPI = window.electronAPI || {
+                selectFiles: async () => [], shredFiles: async () => [],
+                minimizeWindow: () => {}, closeWindow: () => {}
+            };
+
+            const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            const activeAnimations = new Set();
+            const stripTimers = new Set();
+            const cutLineAnims = [];
+            const hangingAnims = [];
+            const hangingVibes = [];
+
+            const FILE_COLORS = {
+                folder: '#E3A13A', image: '#3FA7D6', pdf: '#E05252', text: '#718096',
+                word: '#2B6CB0', excel: '#2F9E63', powerpoint: '#D97736',
+                archive: '#9B6BC9', video: '#D64B7B', audio: '#38A89D',
+                design: '#B5478F', code: '#4A67B8', generic: '#7A8796'
+            };
+
+            function shade(hex, amount) {
+                const n = parseInt(hex.slice(1), 16);
+                const r = Math.max(0, Math.min(255, (n >> 16) + amount));
+                const g = Math.max(0, Math.min(255, ((n >> 8) & 255) + amount));
+                const b = Math.max(0, Math.min(255, (n & 255) + amount));
+                return 'rgb(' + r + ',' + g + ',' + b + ')';
+            }
+
+            function isFolder(file) {
+                if (!file) return false;
+                if (file.isDirectory || file.type === 'httpd/unix-directory') return true;
+                try {
+                    const entry = file.webkitGetAsEntry && file.webkitGetAsEntry();
+                    if (entry && entry.isDirectory) return true;
+                } catch (e) {}
+                return false;
+            }
+
+            function getFileType(file) {
+                if (isFolder(file)) return 'folder';
+                const t = (file.type || '').toLowerCase();
+                const n = (file.name || '').toLowerCase();
+                if (t.startsWith('image/')) return 'image';
+                if (t === 'application/pdf' || n.endsWith('.pdf')) return 'pdf';
+                if (t.startsWith('video/') || ['.mp4','.mov','.webm','.mkv'].some(e => n.endsWith(e))) return 'video';
+                if (t.startsWith('audio/') || ['.mp3','.wav','.aac','.flac'].some(e => n.endsWith(e))) return 'audio';
+                if (['.ai','.eps','.psd','.sketch','.fig','.xd'].some(e => n.endsWith(e))) return 'design';
+                if (['.js','.ts','.py','.html','.css','.json','.xml','.java','.c','.cpp','.sh'].some(e => n.endsWith(e))) return 'code';
+                if (t.startsWith('text/') || ['.txt','.md','.csv','.log'].some(e => n.endsWith(e))) return 'text';
+                if (['.doc','.docx'].some(e => n.endsWith(e))) return 'word';
+                if (['.xls','.xlsx'].some(e => n.endsWith(e))) return 'excel';
+                if (['.ppt','.pptx'].some(e => n.endsWith(e))) return 'powerpoint';
+                if (['.zip','.rar','.7z'].some(e => n.endsWith(e))) return 'archive';
+                return 'generic';
+            }
+
+            function getFileColor(file) {
+                return FILE_COLORS[getFileType(file)] || FILE_COLORS.generic;
+            }
+
+            // Build the paper preview. Image blob URLs are kept alive until the shred
+            // finishes so every falling strip can sample a piece of the real document.
+            function makeFileIconUrl(type, name, color) {
+                const glyphs = {
+                    folder: '📁', image: '▣', pdf: 'PDF', text: 'TXT', word: 'W',
+                    excel: 'X', powerpoint: 'P', archive: 'ZIP', video: '▶',
+                    audio: '♪', design: '✦', code: '&lt;/&gt;', generic: 'DOC'
+                };
+                const ext = (name.split('.').pop() || type).toUpperCase().slice(0, 5);
+                const glyph = glyphs[type] || 'DOC';
+                const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="120" height="150" viewBox="0 0 120 150">' +
+                    '<defs><linearGradient id="p" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#e7e7eb"/></linearGradient></defs>' +
+                    '<path d="M8 4 H80 L106 30 V143 Q106 147 102 147 H12 Q8 147 8 143 Z" fill="url(#p)" stroke="rgba(0,0,0,0.2)"/>' +
+                    '<path d="M80 4 V30 H106 Z" fill="#cfcfd6"/>' +
+                    '<text x="57" y="88" font-family="Arial,sans-serif" font-size="42" font-weight="bold" fill="' + color + '" text-anchor="middle">' + glyph + '</text>' +
+                    '<rect x="8" y="113" width="98" height="34" fill="' + color + '"/>' +
+                    '<text x="57" y="137" font-family="Arial,sans-serif" font-size="17" font-weight="bold" fill="#ffffff" text-anchor="middle">' + ext + '</text>' +
+                    '</svg>';
+                return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+            }
+
+            function createPreview(file, type, color, thumb) {
+                const div = document.createElement('div');
+                div.dataset.fileColor = color || getFileColor(file);
+                const c = div.dataset.fileColor;
+                if (thumb) {
+                    div.className = 'thumb-preview';
+                    const img = document.createElement('img');
+                    img.src = thumb;
+                    div.appendChild(img);
+                    const label = document.createElement('div');
+                    label.className = 'thumb-label';
+                    label.textContent = file.name || '';
+                    div.appendChild(label);
+                    return div;
+                }
+                div.className = 'thumb-preview';
+                const img = document.createElement('img');
+                if (type === 'image') {
+                    img.src = URL.createObjectURL(file);
+                    state.objectUrls.push(img.src);
+                } else {
+                    img.src = makeFileIconUrl(type, file.name || file.type || 'file', c);
+                }
+                div.appendChild(img);
+                const label = document.createElement('div');
+                label.className = 'thumb-label';
+                label.textContent = file.name || '';
+                div.appendChild(label);
+                return div;
+            }
+
+            async function generatePreview(file, type) {
+                if (type === 'text' && file && typeof file.text === 'function') {
+                    try { file.previewText = (await file.text()).slice(0, 2000); } catch (e) { /* keep name fallback */ }
+                }
+                if (file.thumbDataUrl === undefined && file.path) {
+                    try {
+                        const thumb = electronAPI.getThumbnail ? await electronAPI.getThumbnail(file.path) : null;
+                        const icon = electronAPI.getFileIcon ? await electronAPI.getFileIcon(file.path) : null;
+                        file.thumbDataUrl = thumb || icon;
+                    } catch (e) { file.thumbDataUrl = null; }
+                }
+                return createPreview(file, type, getFileColor(file), file.thumbDataUrl);
+            }
+
+            function loadThumbnail(file) {
+                if (!file || !file.path || file.thumbDataUrl !== undefined) return;
+                file.thumbDataUrl = null;
+                const icon = electronAPI.getFileIcon ? electronAPI.getFileIcon(file.path) : Promise.resolve(null);
+                const thumb = electronAPI.getThumbnail ? electronAPI.getThumbnail(file.path) : Promise.resolve(null);
+                Promise.all([thumb, icon]).then(function(results) {
+                    file.thumbDataUrl = results[0] || results[1];
+                    if (file.thumbDataUrl && state.pendingFile === file) showPendingFile(file);
+                }).catch(function() {});
+            }
+
+            function releaseObjectUrls() {
+                state.objectUrls.forEach(u => URL.revokeObjectURL(u));
+                state.objectUrls = [];
+            }
+
+            function styleStrip(strip, preview, seed) {
+                const img = preview.querySelector('img');
+                const color = preview.dataset.fileColor;
+                if (img) {
+                    strip.style.backgroundImage = 'url("' + img.src + '")';
+                    strip.style.backgroundSize = '700% 100%';
+                    strip.style.backgroundPosition = ((seed * 37) % 100) + '% ' + ((seed * 61) % 100) + '%';
+                } else if (color) {
+                    strip.style.background = 'linear-gradient(180deg,' + shade(color, 46) + ',' + shade(color, -18) + ')';
+                } else if (preview.classList.contains('text-preview')) {
+                    strip.style.background = 'repeating-linear-gradient(180deg, #fcfcfc 0 2px, #e9e9e9 2px 4px)';
+                    strip.style.backgroundPosition = '0 ' + ((seed * 5) % 8) + 'px';
+                } else if (preview.classList.contains('pdf-preview')) {
+                    strip.style.background = 'linear-gradient(135deg, #fff6e8, #ffe1b0)';
+                } else {
+                    strip.style.background = 'linear-gradient(135deg, #fafafa, #e6e6e6)';
+                }
+            }
+
+            function getGeometry() {
+                const m = el.shredderMachine.getBoundingClientRect();
+                const p = el.binPile.getBoundingClientRect();
+                return {
+                    pileLeft: p.left - m.left,
+                    pileTop: p.top - m.top,
+                    pileW: p.width,
+                    pileH: p.height
+                };
+            }
+
+            function stripSize() {
+                if (Math.random() < 0.22) return { w: 8 + Math.random() * 7, h: 10 + Math.random() * 10 };
+                return { w: 3.5 + Math.random() * 2.5, h: 40 + Math.random() * 34 };
+            }
+
+            function addInstantPile(preview, geom) {
+                for (let i = 0; i < 14; i++) {
+                    const s = document.createElement('div');
+                    s.className = 'shred-strip settled';
+                    const size = stripSize();
+                    const w = size.w, h = size.h;
+                    s.style.width = w + 'px'; s.style.height = h + 'px';
+                    styleStrip(s, preview, i);
+                    s.style.left = (8 + Math.random() * (geom.pileW - 20)) + 'px';
+                    s.style.top = (geom.pileH - h - 6 - Math.random() * 40) + 'px';
+                    s.style.transform = 'rotate(' + ((Math.random() - 0.5) * 200) + 'deg)';
+                    el.binPile.appendChild(s);
+                }
+            }
+
+            function updateBinFill() {
+                const pct = Math.min(100, (state.shreddedCount / state.settings.maxBinCapacity) * 100);
+                state.binFillLevel = pct;
+                el.binFillLevel.style.height = pct + '%';
+            }
+
+            function updateStatus(text, type) {
+                el.statusText.textContent = text;
+                el.statusDot.className = 'status-dot ' + type;
+            }
+
+            function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+            let audioCtx = null;
+            let shredSound = null;
+
+            function unlockAudio() {
+                if (!state.settings.soundEnabled) return;
+                try {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return;
+                    if (!audioCtx) audioCtx = new AC();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                } catch (e) {}
+            }
+
+            function haptic(pattern) {
+                if (/Mac|iPhone|iPad|iPod/i.test(navigator.platform || '')) return;
+                if (navigator.vibrate) { try { navigator.vibrate(pattern); } catch (e) {} }
+            }
+
+            function startShredSound() {
+                if (!state.settings.soundEnabled) return;
+                try {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return;
+                    if (!audioCtx) audioCtx = new AC();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const length = audioCtx.sampleRate * 2;
+                    const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    let last = 0;
+                    for (let i = 0; i < length; i++) {
+                        const white = Math.random() * 2 - 1;
+                        last = (last + 0.02 * white) / 1.02;
+                        data[i] = last * 3.2;
+                    }
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.loop = true;
+                    const filter = audioCtx.createBiquadFilter();
+                    filter.type = 'bandpass';
+                    filter.frequency.value = 850;
+                    filter.Q.value = 0.7;
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    gain.gain.linearRampToValueAtTime(0.22, audioCtx.currentTime + 0.18);
+                    source.connect(filter).connect(gain).connect(audioCtx.destination);
+
+                    const motor = audioCtx.createOscillator();
+                    motor.type = 'sawtooth';
+                    motor.frequency.value = 62;
+                    const motorGain = audioCtx.createGain();
+                    motorGain.gain.setValueAtTime(0, audioCtx.currentTime);
+                    motorGain.gain.linearRampToValueAtTime(0.045, audioCtx.currentTime + 0.18);
+                    motor.connect(motorGain).connect(audioCtx.destination);
+
+                    source.start();
+                    motor.start();
+                    shredSound = { source: source, motor: motor, gain: gain, motorGain: motorGain };
+                } catch (e) { shredSound = null; }
+            }
+
+            function stopShredSound() {
+                if (!shredSound || !audioCtx) return;
+                const sound = shredSound;
+                shredSound = null;
+                const t = audioCtx.currentTime;
+                try {
+                    sound.gain.gain.cancelScheduledValues(t);
+                    sound.gain.gain.setValueAtTime(sound.gain.gain.value, t);
+                    sound.gain.gain.linearRampToValueAtTime(0, t + 0.22);
+                    sound.motorGain.gain.cancelScheduledValues(t);
+                    sound.motorGain.gain.setValueAtTime(sound.motorGain.gain.value, t);
+                    sound.motorGain.gain.linearRampToValueAtTime(0, t + 0.22);
+                    setTimeout(function() { try { sound.source.stop(); sound.motor.stop(); } catch (e) {} }, 280);
+                } catch (e) {}
+            }
+
+            let burnSound = null;
+
+            function startBurnSound() {
+                if (!state.settings.soundEnabled) return;
+                try {
+                    const AC = window.AudioContext || window.webkitAudioContext;
+                    if (!AC) return;
+                    if (!audioCtx) audioCtx = new AC();
+                    if (audioCtx.state === 'suspended') audioCtx.resume();
+                    const now = audioCtx.currentTime;
+                    const length = audioCtx.sampleRate * 3;
+                    const buffer = audioCtx.createBuffer(1, length, audioCtx.sampleRate);
+                    const data = buffer.getChannelData(0);
+                    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * 0.7;
+                    const source = audioCtx.createBufferSource();
+                    source.buffer = buffer;
+                    source.loop = true;
+                    const high = audioCtx.createBiquadFilter();
+                    high.type = 'highpass'; high.frequency.value = 180;
+                    const low = audioCtx.createBiquadFilter();
+                    low.type = 'lowpass'; low.frequency.value = 1500;
+                    const gain = audioCtx.createGain();
+                    gain.gain.setValueAtTime(0, now);
+                    gain.gain.linearRampToValueAtTime(0.17, now + 0.12);
+                    gain.gain.setTargetAtTime(0.05, now + 0.6, 0.6);
+                    gain.gain.linearRampToValueAtTime(0, now + 2.7);
+                    source.connect(high).connect(low).connect(gain).connect(audioCtx.destination);
+                    source.start();
+                    for (let k = 0; k < 22; k++) {
+                        const t = now + 0.1 + Math.random() * 2.2;
+                        const pop = audioCtx.createOscillator();
+                        pop.type = 'square';
+                        pop.frequency.value = 500 + Math.random() * 1500;
+                        const popGain = audioCtx.createGain();
+                        popGain.gain.setValueAtTime(0, t);
+                        popGain.gain.linearRampToValueAtTime(0.025, t + 0.005);
+                        popGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.06);
+                        pop.connect(popGain).connect(audioCtx.destination);
+                        pop.start(t); pop.stop(t + 0.07);
+                    }
+                    burnSound = { source: source, gain: gain };
+                } catch (e) { burnSound = null; }
+            }
+
+            function stopBurnSound() {
+                if (!burnSound || !audioCtx) return;
+                const sound = burnSound;
+                burnSound = null;
+                try {
+                    const t = audioCtx.currentTime;
+                    sound.gain.gain.cancelScheduledValues(t);
+                    sound.gain.gain.setValueAtTime(sound.gain.gain.value, t);
+                    sound.gain.gain.linearRampToValueAtTime(0, t + 0.25);
+                    setTimeout(function() { try { sound.source.stop(); } catch (e) {} }, 300);
+                } catch (e) {}
+            }
+
+            function updateFeedbackButtons() {
+                el.soundIcon.textContent = state.settings.soundEnabled ? '🔊' : '🔇';
+                el.soundBtn.classList.toggle('muted', !state.settings.soundEnabled);
+                el.soundBtn.title = 'Sound: ' + (state.settings.soundEnabled ? 'on' : 'off');
+                el.soundBtn.setAttribute('aria-pressed', String(state.settings.soundEnabled));
+            }
+
+            function buildCutLines() {
+                el.cutLines.innerHTML = '';
+                const count = 26;
+                for (let i = 0; i < count; i++) {
+                    const line = document.createElement('div');
+                    line.className = 'cut-line';
+                    line.style.left = (((i + 0.5) / count) * 100).toFixed(2) + '%';
+                    el.cutLines.appendChild(line);
+                }
+            }
+
+            function resetCutLines() {
+                cutLineAnims.forEach(a => a.cancel());
+                cutLineAnims.length = 0;
+                el.paperWaiting.classList.remove('shredding');
+                Array.from(el.cutLines.children).forEach(line => { line.style.transform = 'scaleY(0)'; });
+            }
+
+            function startCutLines(duration, jam) {
+                const frames = jam ? [
+                    { transform: 'scaleY(0)' }, { transform: 'scaleY(0.42)', offset: 0.28 },
+                    { transform: 'scaleY(0.34)', offset: 0.42 }, { transform: 'scaleY(0.72)', offset: 0.6 },
+                    { transform: 'scaleY(0.64)', offset: 0.72 }, { transform: 'scaleY(1)' }
+                ] : [{ transform: 'scaleY(0)' }, { transform: 'scaleY(1)' }];
+                Array.from(el.cutLines.children).forEach(function(line, i) {
+                    cutLineAnims.push(line.animate(frames,
+                        { duration: duration * 0.92, delay: (i % 6) * 14, easing: 'linear', fill: 'forwards' }
+                    ));
+                });
+                el.paperWaiting.classList.add('shredding');
+            }
+
+            function clearHanging() {
+                hangingAnims.forEach(a => a.cancel());
+                hangingAnims.length = 0;
+                hangingVibes.forEach(a => a.cancel());
+                hangingVibes.length = 0;
+                el.hangingLayer.innerHTML = '';
+            }
+
+            function startHanging(preview, duration, jam) {
+                clearHanging();
+                const count = 32;
+                for (let i = 0; i < count; i++) {
+                    const strip = document.createElement('div');
+                    strip.className = 'hanging-strip';
+                    strip.style.left = (((i + 0.5) / count) * 100).toFixed(2) + '%';
+                    strip.style.width = (4 + Math.random() * 2).toFixed(1) + 'px';
+                    styleStrip(strip, preview, i);
+                    strip.style.backgroundSize = '700% 100%';
+                    strip.style.height = (84 + Math.random() * 36).toFixed(0) + 'px';
+                    const lean = (Math.random() - 0.5) * 7;
+                    strip.dataset.lean = lean.toFixed(1);
+                    el.hangingLayer.appendChild(strip);
+                    const growth = jam ? [
+                        { transform: 'scaleY(0) translateY(-10px) rotate(0deg)', opacity: 0 },
+                        { transform: 'scaleY(0.42) translateY(-6px) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1, offset: 0.28 },
+                        { transform: 'scaleY(0.34) translateY(-8px) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1, offset: 0.42 },
+                        { transform: 'scaleY(0.74) translateY(-3px) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1, offset: 0.6 },
+                        { transform: 'scaleY(0.66) translateY(-5px) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1, offset: 0.72 },
+                        { transform: 'scaleY(1) translateY(0) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1 }
+                    ] : [
+                        { transform: 'scaleY(0) translateY(-10px) rotate(0deg)', opacity: 0 },
+                        { transform: 'scaleY(1) translateY(0px) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1 }
+                    ];
+                    hangingAnims.push(strip.animate(growth,
+                        { duration: duration, easing: jam ? 'linear' : 'cubic-bezier(0.45, 0.05, 0.55, 0.95)', fill: 'forwards' }));
+
+                    const jitter = 1.2 + Math.random() * 1.8;
+                    hangingVibes.push(strip.animate([
+                        { transform: 'scaleY(1) rotate(' + (lean - jitter).toFixed(1) + 'deg) translate(-0.6px, -0.5px)' },
+                        { transform: 'scaleY(1) rotate(' + (lean + jitter).toFixed(1) + 'deg) translate(0.6px, 0.5px)' }
+                    ], { duration: 90 + Math.random() * 70, delay: duration,
+                         iterations: Infinity, direction: 'alternate', easing: 'ease-in-out' }));
+                }
+            }
+
+            function landedHanging(faller, pile, tx, ty, rot, w, h) {
+                const x = Math.max(0, Math.min(pile.width - w, tx - pile.left));
+                const y = Math.max(0, Math.min(pile.height - h, ty - pile.top));
+                const settled = faller.cloneNode(true);
+                settled.className = 'shred-strip settled';
+                settled.style.left = x.toFixed(1) + 'px';
+                settled.style.top = y.toFixed(1) + 'px';
+                settled.style.transform = 'rotate(' + rot.toFixed(1) + 'deg)';
+                settled.style.animation = 'none';
+                el.binPile.appendChild(settled);
+                faller.remove();
+                if (el.binPile.children.length > 180) {
+                    for (let i = 0; i < 45 && el.binPile.firstChild; i++) el.binPile.removeChild(el.binPile.firstChild);
+                }
+            }
+
+            function dropHanging() {
+                const machine = el.shredderMachine.getBoundingClientRect();
+                const pr = el.binPile.getBoundingClientRect();
+                const pile = { left: pr.left - machine.left, top: pr.top - machine.top, width: pr.width, height: pr.height };
+                Array.from(el.hangingLayer.children).forEach(function(strip, i) {
+                    const r = strip.getBoundingClientRect();
+                    const w = parseFloat(strip.style.width) || r.width;
+                    const h = parseFloat(strip.style.height) || r.height;
+                    const sx = r.left - machine.left;
+                    const sy = r.top - machine.top;
+                    const fill = Math.min(1, el.binPile.children.length / 130);
+                    const tx = pile.left + 8 + Math.random() * Math.max(1, pile.width - w - 16);
+                    const ty = pile.top + pile.height - h - 6 - Math.random() * (8 + fill * 46);
+                    const lean = parseFloat(strip.dataset.lean || '0');
+                    const tumble = (Math.random() - 0.5) * 180;
+                    const sway = (Math.random() - 0.5) * 22;
+                    const duration = 640 + Math.random() * 300;
+                    const delay = (i % 6) * 22;
+
+                    const faller = strip.cloneNode(true);
+                    faller.className = 'shred-strip';
+                    faller.style.left = sx.toFixed(1) + 'px';
+                    faller.style.top = sy.toFixed(1) + 'px';
+                    faller.style.width = w.toFixed(1) + 'px';
+                    faller.style.height = h.toFixed(1) + 'px';
+                    faller.style.transform = 'scaleY(1) rotate(' + lean.toFixed(1) + 'deg)';
+                    el.dropFallLayer.appendChild(faller);
+
+                    const dx = tx - sx;
+                    const dy = ty - sy;
+                    const anim = faller.animate([
+                        { transform: 'scaleY(1) rotate(' + lean.toFixed(1) + 'deg)', opacity: 1, offset: 0 },
+                        { transform: 'translate3d(' + (dx * 0.32 + sway).toFixed(1) + 'px,' + (dy * 0.4).toFixed(1) + 'px,0) scaleY(1) rotate(' + (tumble * 0.3).toFixed(1) + 'deg)', opacity: 1, offset: 0.4 },
+                        { transform: 'translate3d(' + dx.toFixed(1) + 'px,' + dy.toFixed(1) + 'px,0) scaleY(1) rotate(' + tumble.toFixed(1) + 'deg)', opacity: 1, offset: 1 }
+                    ], { duration: duration, delay: delay, easing: 'cubic-bezier(0.35, 0.05, 0.7, 1)', fill: 'forwards' });
+                    activeAnimations.add(anim);
+                    const timer = setTimeout(function() {
+                        landedHanging(faller, pile, tx, ty, tumble, w, h);
+                        stripTimers.delete(timer);
+                        anim.cancel();
+                        activeAnimations.delete(anim);
+                    }, duration + delay);
+                    stripTimers.add(timer);
+                });
+                clearHanging();
+            }
+
+            function showPendingFile(file) {
+                el.widgetContainer.classList.add('has-file');
+                const color = getFileColor(file);
+                el.fileName.innerHTML = '';
+                const dot = document.createElement('span');
+                dot.className = 'file-dot';
+                dot.style.background = color;
+                el.fileName.appendChild(dot);
+                el.fileName.appendChild(document.createTextNode(file.name || 'file'));
+                el.fileName.title = file.name || 'file';
+                resetCutLines();
+                clearHanging();
+                const preview = createPreview(file, getFileType(file), color, file.thumbDataUrl);
+                el.paperWaitingContent.innerHTML = '';
+                el.paperWaitingContent.appendChild(preview);
+                el.paperWaiting.style.transition = '';
+                el.paperWaiting.style.opacity = '';
+                el.paperWaiting.style.visibility = '';
+                el.paperWaiting.style.transform = '';
+                el.paperWaiting.classList.add('has-paper');
+                el.emptyState.classList.add('hidden');
+            }
+
+            function onFilesDropped(files) {
+                if (!files || files.length === 0) return;
+                if (state.isProcessing) return;
+                state.pendingFile = files[0];
+                state.queuedFiles = files.slice(1);
+                files.forEach(loadThumbnail);
+                showPendingFile(state.pendingFile);
+                unlockAudio();
+                updateStatus(files.length + ' file(s) dropped - shredding...', 'processing');
+                setTimeout(() => onShredClick(), 350);
+            }
+
+            async function onShredClick() {
+                if (state.isProcessing || !state.pendingFile) return;
+                state.isProcessing = true;
+                updateStatus('Feeding paper into cutter...', 'processing');
+
+                const file = state.pendingFile;
+                state.pendingFile = null;
+                const speed = state.settings.shredSpeed;
+
+                try {
+                    const fileType = getFileType(file);
+                    const isFolder = fileType === 'folder';
+                    const preview = await generatePreview(file, fileType);
+                    const geom = getGeometry();
+
+                    if (reduceMotion) {
+                        addInstantPile(preview, geom);
+                    } else {
+                        if (state.settings.vibrationEnabled) {
+                            el.machineBody.classList.add('shredding');
+                            haptic([45, 60, 45]);
+                        }
+                        el.cutterMechanism.classList.add('shredding');
+                        startShredSound();
+
+                        const feedDistance = el.paperWaiting.offsetHeight + 26;
+                        const feedDuration = (isFolder ? 2500 : 1100) / speed;
+                        const feedFrames = isFolder ? [
+                            { transform: 'translateX(-50%) translateY(0px)', clipPath: 'inset(0 0 0 0)', offset: 0 },
+                            { transform: 'translateX(-50%) translateY(46px)', clipPath: 'inset(0 0 28% 0)', offset: 0.28 },
+                            { transform: 'translateX(-50%) translateY(37px)', clipPath: 'inset(0 0 32% 0)', offset: 0.42 },
+                            { transform: 'translateX(-50%) translateY(76px)', clipPath: 'inset(0 0 54% 0)', offset: 0.6 },
+                            { transform: 'translateX(-50%) translateY(65px)', clipPath: 'inset(0 0 60% 0)', offset: 0.72 },
+                            { transform: 'translateX(-50%) translateY(' + feedDistance + 'px)', clipPath: 'inset(0 0 100% 0)', offset: 1 }
+                        ] : [
+                            { transform: 'translateX(-50%) translateY(0px)', clipPath: 'inset(0 0 0 0)' },
+                            { transform: 'translateX(-50%) translateY(' + feedDistance + 'px)', clipPath: 'inset(0 0 100% 0)' }
+                        ];
+                        const feedAnim = el.paperWaiting.animate(feedFrames,
+                            { duration: feedDuration, easing: isFolder ? 'linear' : 'cubic-bezier(0.45, 0.05, 0.55, 0.95)', fill: 'forwards' });
+                        startCutLines(feedDuration, isFolder);
+                        startHanging(preview, feedDuration, isFolder);
+                        if (isFolder) {
+                            el.machineBody.classList.add('shredding-hard');
+                            haptic([80, 50, 80, 50, 120]);
+                        }
+
+                        updateStatus(isFolder ? 'Folder jammed - forcing through...' : 'Cutters slicing paper...', 'processing');
+
+                        await Promise.race([
+                            feedAnim.finished.catch(() => {}),
+                            sleep(feedDuration + 300)
+                        ]);
+                        updateStatus('Shreds dropping into bin...', 'processing');
+                        dropHanging();
+                        await sleep(1050);
+                        resetCutLines();
+                        el.paperWaiting.style.transition = 'none';
+                        el.paperWaiting.style.opacity = '0';
+                        el.paperWaiting.style.visibility = 'hidden';
+                        feedAnim.cancel();
+                    }
+
+                    el.paperWaiting.classList.remove('has-paper');
+                    el.paperWaiting.style.transition = 'none';
+                    el.paperWaiting.style.opacity = '0';
+                    el.paperWaiting.style.visibility = 'hidden';
+                    el.paperWaiting.style.transform = '';
+                    el.machineBody.classList.remove('shredding');
+                    el.machineBody.classList.remove('shredding-hard');
+                    el.cutterMechanism.classList.remove('shredding');
+                    stopShredSound();
+                    haptic(0);
+
+                    let deletionOk = true;
+                    if (file.path && typeof electronAPI.shredFiles === 'function') {
+                        const results = await electronAPI.shredFiles([file.path]);
+                        if (Array.isArray(results) && results.length) deletionOk = results.every(r => r.success);
+                    }
+
+                    state.shreddedCount++;
+                    el.shreddedCount.textContent = state.shreddedCount;
+                    updateBinFill();
+
+                    if (state.queuedFiles.length > 0) {
+                        const next = state.queuedFiles.shift();
+                        state.pendingFile = next;
+                        showPendingFile(next);
+                        updateStatus('Next file queued (' + (state.queuedFiles.length + 1) + ' left)', 'processing');
+                        setTimeout(() => onShredClick(), 350);
+                    } else {
+                        updateStatus(deletionOk ? 'Shredded successfully' : 'Shred failed', deletionOk ? 'ready' : 'error');
+                        if (deletionOk) setTimeout(() => { if (!state.isBurning) updateStatus('Ready - Drop files', 'ready'); }, 2000);
+                    }
+                    releaseObjectUrls();
+                } catch (e) {
+                    console.error('Shred error:', e);
+                    updateStatus('Shred failed', 'error');
+                    resetCutLines();
+                    clearHanging();
+                    el.binFallLayer.innerHTML = '';
+                    el.dropFallLayer.innerHTML = '';
+                    el.paperWaiting.classList.remove('has-paper');
+                    el.machineBody.classList.remove('shredding');
+                    el.machineBody.classList.remove('shredding-hard');
+                    el.cutterMechanism.classList.remove('shredding');
+                    stopShredSound();
+                    haptic(0);
+                    stripTimers.forEach(clearTimeout);
+                    stripTimers.clear();
+                    activeAnimations.forEach(a => a.cancel());
+                    activeAnimations.clear();
+                    el.fallingLayer.innerHTML = '';
+                    releaseObjectUrls();
+                } finally {
+                    state.isProcessing = false;
+                }
+            }
+
+            async function emptyBin() {
+                if (state.isBurning) return;
+                const hasStrips = el.binPile.children.length > 0 || el.binFallLayer.children.length > 0 || el.dropFallLayer.children.length > 0;
+                if (!hasStrips) {
+                    if (window.electronAPI && electronAPI.burnBin) await electronAPI.burnBin();
+                    state.shreddedCount = 0; el.shreddedCount.textContent = '0'; updateBinFill();
+                    updateStatus('Bin emptied', 'ready');
+                    setTimeout(() => updateStatus('Ready - Drop files', 'ready'), 1500);
+                    return;
+                }
+
+                state.isBurning = true;
+                el.emptyBtn.disabled = true;
+                startBurnSound();
+                updateStatus('Burning shreds...', 'processing');
+                stripTimers.forEach(clearTimeout);
+                stripTimers.clear();
+                activeAnimations.forEach(a => a.cancel());
+                activeAnimations.clear();
+                el.binFallLayer.innerHTML = '';
+                el.dropFallLayer.innerHTML = '';
+                clearHanging();
+
+                el.burnLayer.innerHTML = '';
+                el.smokeLayer.innerHTML = '';
+                const binRect = el.bin.getBoundingClientRect();
+                const pileRect = el.binPile.getBoundingClientRect();
+                const machineRect = el.shredderMachine.getBoundingClientRect();
+                const pileLeft = pileRect.left - binRect.left;
+                const burnDuration = 1500;
+                const fromX = binRect.width + 26;
+                const toX = -26;
+                el.bin.classList.add('burning');
+
+                const emitSmoke = function(xInBin, count) {
+                    for (let k = 0; k < count; k++) {
+                        const puff = document.createElement('div');
+                        puff.className = 'smoke-puff';
+                        puff.style.left = (binRect.left - machineRect.left + xInBin + (Math.random() - 0.5) * 20).toFixed(1) + 'px';
+                        puff.style.top = (binRect.top - machineRect.top + binRect.height * 0.45 + Math.random() * binRect.height * 0.35).toFixed(1) + 'px';
+                        el.smokeLayer.appendChild(puff);
+                        puff.animate([
+                        { transform: 'translate(0,0) scale(0.5)', opacity: 0.85 },
+                        { transform: 'translate(' + ((Math.random() - 0.5) * 40).toFixed(1) + 'px,' + (-90 - Math.random() * 60).toFixed(1) + 'px) scale(2.6)', opacity: 0 }
+                        ], { duration: 1300 + Math.random() * 700, easing: 'ease-out', fill: 'forwards' });
+                    }
+                };
+
+                const dpr = window.devicePixelRatio || 1;
+                const canvas = el.fireCanvas;
+                canvas.width = Math.round(binRect.width * dpr);
+                canvas.height = Math.round(binRect.height * dpr);
+                canvas.style.width = binRect.width + 'px';
+                canvas.style.height = binRect.height + 'px';
+                const ctx = canvas.getContext('2d');
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+                const particles = [];
+                const midX = binRect.width / 2;
+                emitSmoke(midX, 7);
+
+                const drawTongue = function(x, h, w, sway, alpha) {
+                    const baseY = binRect.height - 2;
+                    const g = ctx.createLinearGradient(x, baseY, x + sway, baseY - h);
+                    g.addColorStop(0, 'rgba(255,205,70,' + (alpha * 0.95) + ')');
+                    g.addColorStop(0.38, 'rgba(255,252,205,' + (alpha * 0.92) + ')');
+                    g.addColorStop(0.72, 'rgba(255,135,20,' + (alpha * 0.55) + ')');
+                    g.addColorStop(1, 'rgba(215,45,0,0)');
+                    ctx.fillStyle = g;
+                    ctx.beginPath();
+                    ctx.moveTo(x - w, baseY);
+                    ctx.quadraticCurveTo(x - w * 0.8, baseY - h * 0.55, x + sway, baseY - h);
+                    ctx.quadraticCurveTo(x + w * 0.9, baseY - h * 0.45, x + w, baseY);
+                    ctx.closePath();
+                    ctx.fill();
+                };
+
+                const runFire = () => new Promise(function(resolve) {
+                    let start = 0, prev = 0, done = false;
+                    const finish = () => { if (!done) { done = true; resolve(); } };
+                    setTimeout(finish, burnDuration + 750);
+                    function step(now) {
+                        if (done) return;
+                        if (!start) { start = now; prev = now; }
+                        const dt = Math.min(40, now - prev);
+                        prev = now;
+                        const t = now - start;
+                        const progress = Math.min(1, t / burnDuration);
+                        const spread = progress * binRect.width * 0.58;
+                        ctx.clearRect(0, 0, binRect.width, binRect.height);
+
+                        if (t < 460) {
+                            const a = 1 - t / 460;
+                            const g = ctx.createRadialGradient(midX, binRect.height * 0.78, 2, midX, binRect.height * 0.78, 90);
+                            g.addColorStop(0, 'rgba(255,255,225,' + (a * 0.95) + ')');
+                            g.addColorStop(0.25, 'rgba(255,190,60,' + (a * 0.7) + ')');
+                            g.addColorStop(0.65, 'rgba(240,80,12,' + (a * 0.3) + ')');
+                            g.addColorStop(1, 'rgba(160,30,0,0)');
+                            ctx.globalCompositeOperation = 'lighter';
+                            ctx.fillStyle = g;
+                            ctx.fillRect(0, 0, binRect.width, binRect.height);
+                        }
+
+                        if (progress < 0.96) {
+                            ctx.globalCompositeOperation = 'lighter';
+                            [midX - spread, midX + spread].forEach(function(front, fi) {
+                                for (let k = 0; k < 4; k++) {
+                                    const phase = t * 0.011 + k * 2.3 + fi * 1.7;
+                                    const h = 24 + Math.abs(Math.sin(phase)) * 40 + Math.random() * 8;
+                                    const w = 5 + Math.random() * 6;
+                                    const sway = Math.sin(phase * 0.72) * 11;
+                                    drawTongue(front + (k - 1.5) * 8, h, w, sway, 0.9);
+                                }
+                            });
+                        }
+
+                        if (progress < 0.92) {
+                            [midX - spread, midX + spread].forEach(function(front) {
+                                for (let k = 0; k < 4; k++) {
+                                    particles.push({
+                                        x: front + (Math.random() - 0.5) * 24,
+                                        y: binRect.height - 4 - Math.random() * 16,
+                                        vx: (Math.random() - 0.5) * 1.4,
+                                        vy: -1.1 - Math.random() * 2.4,
+                                        life: 0, max: 260 + Math.random() * 340,
+                                        size: 3 + Math.random() * 7
+                                    });
+                                }
+                            });
+                            for (let k = 0; k < 2; k++) {
+                                particles.push({
+                                    x: midX + (Math.random() - 0.5) * (spread * 2 + 24),
+                                    y: binRect.height * (0.35 + Math.random() * 0.4),
+                                    vx: (Math.random() - 0.5) * 0.8,
+                                    vy: -0.5 - Math.random() * 0.9,
+                                    life: 0, max: 700 + Math.random() * 700,
+                                    size: 10 + Math.random() * 14, smoke: true
+                                });
+                            }
+                        }
+
+                        for (let i = particles.length - 1; i >= 0; i--) {
+                            const p = particles[i];
+                            p.life += dt;
+                            if (p.life >= p.max) { particles.splice(i, 1); continue; }
+                            p.x += p.vx * dt * 0.06;
+                            p.y += p.vy * dt * 0.06;
+                            p.vy *= 0.995;
+                            const a = 1 - p.life / p.max;
+                            if (p.smoke) {
+                                ctx.globalCompositeOperation = 'source-over';
+                                const sr = p.size * (1 + (1 - a) * 2);
+                                const sg = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, sr);
+                                sg.addColorStop(0, 'rgba(232,232,232,' + (a * 0.16) + ')');
+                                sg.addColorStop(0.55, 'rgba(210,210,210,' + (a * 0.08) + ')');
+                                sg.addColorStop(1, 'rgba(200,200,200,0)');
+                                ctx.fillStyle = sg;
+                                ctx.beginPath();
+                                ctx.arc(p.x, p.y, sr, 0, Math.PI * 2);
+                                ctx.fill();
+                            } else {
+                                ctx.globalCompositeOperation = 'lighter';
+                                const r = p.size * (1 + (1 - a) * 1.4);
+                                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+                                g.addColorStop(0, 'rgba(255,252,205,' + (a * 0.95) + ')');
+                                g.addColorStop(0.28, 'rgba(255,180,45,' + (a * 0.8) + ')');
+                                g.addColorStop(0.62, 'rgba(240,80,12,' + (a * 0.38) + ')');
+                                g.addColorStop(1, 'rgba(150,25,0,0)');
+                                ctx.fillStyle = g;
+                                ctx.beginPath();
+                                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                        ctx.globalCompositeOperation = 'source-over';
+                        if (t < burnDuration + 650) requestAnimationFrame(step); else finish();
+                    }
+                    requestAnimationFrame(step);
+                });
+
+                Array.from(el.binPile.children).forEach(function(strip) {
+                    const sx = parseFloat(strip.style.left) || 0;
+                    const sw = parseFloat(strip.style.width) || 5;
+                    const center = pileLeft + sx + sw / 2;
+                    const distance = Math.abs(center - midX);
+                    const progress = Math.max(0, Math.min(1, distance / (binRect.width / 2)));
+                    const delay = progress * burnDuration * 0.82;
+                    const duration = 340 + Math.random() * 220;
+                    const base = strip.style.transform || '';
+                    strip.animate([
+                        { opacity: 1, filter: 'brightness(1)', transform: base },
+                        { opacity: 1, filter: 'brightness(2.3) sepia(1) saturate(9) hue-rotate(-18deg)', transform: base + ' scale(1.08)', offset: 0.2 },
+                        { opacity: 0.85, filter: 'brightness(0.25) sepia(1) saturate(5)', transform: base + ' scale(0.7)', offset: 0.62 },
+                        { opacity: 0, filter: 'brightness(0.1)', transform: base + ' scale(0.15) translateY(-10px)' }
+                    ], { duration: duration, delay: delay, easing: 'ease-in', fill: 'forwards' });
+                    const smokeTimer = setTimeout(() => emitSmoke(center, 2), delay + 160);
+                    stripTimers.add(smokeTimer);
+                });
+
+                await runFire();
+                el.binPile.innerHTML = '';
+                el.burnLayer.innerHTML = '';
+                ctx.clearRect(0, 0, binRect.width, binRect.height);
+                el.bin.classList.remove('burning');
+                for (let wave = 0; wave < 5; wave++) {
+                    emitSmoke(20 + Math.random() * (binRect.width - 40), 4);
+                    await sleep(380);
+                }
+                await sleep(700);
+                el.smokeLayer.innerHTML = '';
+                stopBurnSound();
+
+                if (window.electronAPI && electronAPI.burnBin) await electronAPI.burnBin();
+                state.shreddedCount = 0; el.shreddedCount.textContent = '0'; updateBinFill();
+                state.isBurning = false;
+                el.emptyBtn.disabled = false;
+                updateStatus('Bin emptied', 'ready');
+                setTimeout(() => updateStatus('Ready - Drop files', 'ready'), 1500);
+            }
+
+            // Drag & Drop
+            function onDragOver(e) { e.preventDefault(); e.stopPropagation();
+                el.dropOverlay.classList.add('active');
+                el.feedSlot.style.boxShadow = '0 0 30px rgba(212,168,67,0.4), inset 0 5px 10px rgba(0,0,0,0.95)'; }
+            function onDragLeave(e) { e.preventDefault(); e.stopPropagation();
+                if (!el.widgetContainer.contains(e.relatedTarget)) {
+                    el.dropOverlay.classList.remove('active'); el.feedSlot.style.boxShadow = ''; }}
+            function onDrop(e) { e.preventDefault(); e.stopPropagation();
+                el.dropOverlay.classList.remove('active'); el.feedSlot.style.boxShadow = '';
+                onFilesDropped(Array.from(e.dataTransfer.files)); }
+
+            function filesFromPaths(paths) {
+                return paths.map(p => {
+                    const name = p.split(/[\\/]/).pop() || p;
+                    return {
+                        path: p,
+                        name: name,
+                        type: /\.[a-z0-9]+$/i.test(name) ? '' : 'httpd/unix-directory',
+                        size: 0
+                    };
+                });
+            }
+
+            function pickFiles() {
+                if (window.electronAPI && typeof electronAPI.selectFiles === 'function') {
+                    electronAPI.selectFiles().then(function(paths) {
+                        if (paths && paths.length) onFilesDropped(filesFromPaths(paths));
+                    }).catch(function() {});
+                } else {
+                    el.fileInput.click();
+                }
+            }
+
+            function initTheme() {
+                const key = 'paper-shredder-theme';
+                const media = window.matchMedia('(prefers-color-scheme: light)');
+                const stored = () => { try { return localStorage.getItem(key); } catch (e) { return null; } };
+                const apply = mode => {
+                    const theme = mode === 'auto' ? (media.matches ? 'light' : 'dark') : mode;
+                    document.documentElement.dataset.theme = theme;
+                    el.themeBtn.textContent = theme === 'dark' ? '☀️' : '🌙';
+                    el.themeBtn.title = theme === 'dark' ? 'Light theme (double-click: system)' : 'Dark theme (double-click: system)';
+                };
+                apply(stored() || 'auto');
+                if (media.addEventListener) media.addEventListener('change', () => { if (!stored() || stored() === 'auto') apply('auto'); });
+                el.themeBtn.onclick = e => {
+                    e.stopPropagation();
+                    const next = document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark';
+                    try { localStorage.setItem(key, next); } catch (err) {}
+                    apply(next);
+                };
+                el.themeBtn.ondblclick = e => {
+                    e.stopPropagation();
+                    try { localStorage.removeItem(key); } catch (err) {}
+                    apply('auto');
+                };
+            }
+
+            function setupControls() {
+                el.closeBtn.onclick = e => { e.stopPropagation(); electronAPI.closeWindow?.(); el.widgetContainer.style.display = 'none'; };
+                el.minimizeBtn.onclick = e => { e.stopPropagation(); electronAPI.minimizeWindow?.(); el.widgetContainer.style.transform = 'scale(0.9)'; setTimeout(() => el.widgetContainer.style.display = 'none', 150); };
+                el.settingsBtn.onclick = e => { e.stopPropagation(); showSettings(); };
+                el.emptyBtn.onclick = e => { e.stopPropagation(); emptyBin(); };
+                el.soundBtn.onclick = e => {
+                    e.stopPropagation();
+                    state.settings.soundEnabled = !state.settings.soundEnabled;
+                    try { localStorage.setItem('paper-shredder-sound', state.settings.soundEnabled ? 'on' : 'off'); } catch (err) {}
+                    if (!state.settings.soundEnabled) { stopShredSound(); stopBurnSound(); } else unlockAudio();
+                    updateFeedbackButtons();
+                };
+                el.pickBtn.onclick = e => { e.stopPropagation(); pickFiles(); };
+                el.fileInput.onchange = e => {
+                    if (e.target.files && e.target.files.length) onFilesDropped(Array.from(e.target.files));
+                    el.fileInput.value = '';
+                };
+
+                electronAPI.onTriggerFileSelect?.(async () => {
+                    const paths = await electronAPI.selectFiles();
+                    if (paths && paths.length) onFilesDropped(filesFromPaths(paths));
+                });
+                electronAPI.onShredFilePath?.(p => onFilesDropped(filesFromPaths([p])));
+                electronAPI.onEmptyBin?.(emptyBin);
+                electronAPI.onShowSettings?.(showSettings);
+                electronAPI.onShowInfo?.(showInfo);
+            }
+
+            function showInfo() {
+                const m = document.createElement('div');
+                m.className = 'modal';
+                m.innerHTML = '<div class="modal-box" style="max-height:86vh;overflow:auto">' +
+                    '<h3>How Shred-it works</h3>' +
+                    '<div style="font-size:12px;line-height:1.6;color:var(--text-secondary);margin-bottom:18px">' +
+                    '<p style="margin-bottom:10px"><b style="color:var(--text-primary)">Shred</b> &mdash; the file is moved out of its folder into the private Shredder Bin. You can restore it from the tray menu.</p>' +
+                    '<p style="margin-bottom:10px"><b style="color:var(--text-primary)">Burn / Empty bin</b> &mdash; files in the bin are overwritten and <b style="color:var(--danger-red)">permanently removed from your system</b>. This cannot be undone.</p>' +
+                    '<p style="margin-bottom:10px"><b style="color:var(--text-primary)">Delete from this tool</b> &mdash; means that same permanent burn. No extra confirmation will be asked.</p>' +
+                    '<p>Use the tray menu to show or hide the widget, restore files, or read this information again.</p>' +
+                    '</div>' +
+                    '<div class="btn-group"><button class="btn-save" id="infoOk">Got it</button></div>' +
+                    '</div>';
+                document.body.appendChild(m);
+                requestAnimationFrame(() => m.classList.add('visible'));
+                const cleanup = () => {
+                    m.classList.remove('visible');
+                    setTimeout(() => m.remove(), 200);
+                    try { localStorage.setItem('paper-shredder-info-seen', '1'); } catch (err) {}
+                };
+                m.querySelector('#infoOk').onclick = cleanup;
+                m.onclick = e => { if (e.target === m) cleanup(); };
+            }
+
+            function showSettings() {
+                const m = document.createElement('div');
+                m.className = 'modal';
+                m.innerHTML = `<div class="modal-box">
+                    <h3>Shredder Settings</h3>
+                    <label><span>Shred Speed</span><select id="shredSpeed"><option value="0.7">Slow (Secure)</option><option value="1" selected>Normal</option><option value="1.5">Fast</option></select></label>
+                    <label><span>Secure Delete (Overwrite)</span><input type="checkbox" id="secureDelete" checked></label>
+                    <label><span>Auto-empty bin when full</span><input type="checkbox" id="autoEmpty"></label>
+                    <label><span>Bin Capacity</span><input type="number" id="binCapacity" value="100" min="20" max="500"></label>
+                    <div class="btn-group"><button class="btn-cancel" id="cancelSettings">Cancel</button><button class="btn-save" id="saveSettings">Save</button></div>
+                </div>`;
+                document.body.appendChild(m);
+                requestAnimationFrame(() => m.classList.add('visible'));
+                document.getElementById('shredSpeed').value = state.settings.shredSpeed;
+                document.getElementById('secureDelete').checked = state.settings.secureDelete;
+                document.getElementById('autoEmpty').checked = state.settings.autoEmpty;
+                document.getElementById('binCapacity').value = state.settings.maxBinCapacity;
+                const cleanup = () => { m.classList.remove('visible'); setTimeout(() => m.remove(), 200); };
+                m.querySelector('#cancelSettings').onclick = cleanup;
+                m.querySelector('#saveSettings').onclick = () => {
+                    state.settings.shredSpeed = parseFloat(document.getElementById('shredSpeed').value);
+                    state.settings.secureDelete = document.getElementById('secureDelete').checked;
+                    state.settings.autoEmpty = document.getElementById('autoEmpty').checked;
+                    state.settings.maxBinCapacity = parseInt(document.getElementById('binCapacity').value);
+                    if (window.electronAPI && electronAPI.setSecureDelete) electronAPI.setSecureDelete(state.settings.secureDelete);
+                    if (state.settings.autoEmpty && state.shreddedCount >= state.settings.maxBinCapacity) emptyBin();
+                    cleanup(); updateBinFill();
+                };
+                m.onclick = e => { if (e.target === m) cleanup(); };
+            }
+
+            function init() {
+                let soundOn = true, vibrationOn = true;
+                try {
+                    soundOn = localStorage.getItem('paper-shredder-sound') !== 'off';
+                    vibrationOn = localStorage.getItem('paper-shredder-vibration') !== 'off';
+                } catch (e) {}
+                state.settings = {
+                    shredSpeed: 1, secureDelete: true, autoEmpty: false, maxBinCapacity: 100,
+                    soundEnabled: soundOn, vibrationEnabled: vibrationOn
+                };
+                initTheme();
+                buildCutLines();
+                setupControls();
+                updateFeedbackButtons();
+                el.widgetContainer.addEventListener('dragover', onDragOver);
+                el.widgetContainer.addEventListener('dragleave', onDragLeave);
+                el.widgetContainer.addEventListener('drop', onDrop);
+                document.addEventListener('keydown', e => { if (e.key === 'Escape') { document.querySelectorAll('.modal.visible').forEach(m => { m.classList.remove('visible'); setTimeout(() => m.remove(), 200); }); }});
+                document.addEventListener('dragover', e => e.preventDefault());
+                document.addEventListener('drop', e => e.preventDefault());
+                updateBinFill();
+                if (window.electronAPI && electronAPI.setSecureDelete) electronAPI.setSecureDelete(state.settings.secureDelete);
+                if (window.electronAPI && electronAPI.getBin) {
+                    electronAPI.getBin().then(function(entries) {
+                        if (!entries || !entries.length) return;
+                        state.shreddedCount = entries.length;
+                        el.shreddedCount.textContent = String(entries.length);
+                        updateBinFill();
+                        setTimeout(function() {
+                            const fake = { name: 'shredded.txt', type: 'text/plain' };
+                            const preview = createPreview(fake, 'text', getFileColor(fake), null);
+                            for (let i = 0; i < Math.min(entries.length, 12); i++) addInstantPile(preview, getGeometry());
+                        }, 250);
+                    }).catch(function() {});
+                }
+                let infoSeen = false;
+                try { infoSeen = localStorage.getItem('paper-shredder-info-seen') === '1'; } catch (e) {}
+                if (!infoSeen) setTimeout(showInfo, 500);
+                console.log('Paper Shredder Widget initialized - continuous feed + falling shreds');
+            }
+            if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init); else init();
+        })();
+    </script>
+</body>
+</html>
