@@ -9,7 +9,7 @@ A small floating paper-shredder widget for the desktop. Drop a file into the mac
 | Platform | Installer | Notes |
 |----------|-----------|-------|
 | macOS (Intel + Apple Silicon) | [Shred-it-1.0.0-universal.dmg](https://github.com/ZulfiqarShah9/shred-it/releases/download/v1.0.0/Shred-it-1.0.0-universal.dmg) | Open the DMG and drag **Shred-it.app** to Applications. |
-| Windows x64 | [Shred-it Setup 1.0.0.exe](https://github.com/ZulfiqarShah9/shred-it/releases/download/v1.0.0/Shred-it%20Setup%201.0.0.exe) | Run the installer; desktop and Start menu shortcuts are created. |
+| Windows x64 | [Shred-it.Setup.1.0.0.exe](https://github.com/ZulfiqarShah9/shred-it/releases/download/v1.0.0/Shred-it.Setup.1.0.0.exe) | Run the installer; desktop and Start menu shortcuts are created. |
 
 Verify downloads with `installers/SHA256SUMS.txt` in this repository.
 
