@@ -2,7 +2,7 @@
 
 Shred-it is a floating **paper shredder / secure file deletion** app for the desktop. Drop files into the shredder widget to move them into a private **Shredder Bin**, then **burn the bin** to overwrite and permanently delete them. It is a two-stage secure delete tool with restore, drag & drop, menu-bar/tray access, global shortcuts and animated shredding.
 
-**Keywords:** file shredder, secure delete, secure file deletion, paper shredder, shred-it, shredder app, data destruction, permanent delete, macOS shredder, Windows file shredder, Electron desktop app, privacy tool, trash cleanup, shred files.
+**Keywords:** shredder tool, file shredder tool, desktop shredder tool, secure shredder, file shredder, secure delete, secure file deletion, paper shredder, shred-it, shredder app, data destruction, permanent delete, macOS shredder, Windows file shredder, Electron desktop app, privacy tool, trash cleanup, shred files.
 
 > **Testing status:** v1.0.0 was developed and tested on **macOS only**. The Windows build is cross-compiled from the same source with an NSIS installer, but it has **not been manually tested on Windows** yet. Please report issues.
 
